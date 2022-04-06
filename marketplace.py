@@ -9,6 +9,7 @@ import os
 import threading
 import time
 import logging
+import unittest
 from logging.handlers import RotatingFileHandler
 from .product import Tea, Coffee
 
@@ -210,3 +211,119 @@ class Marketplace:
         logger.info("Out place_order")
         return product_list
 
+
+class TestMarketplace(unittest.TestCase):
+
+    def setUp(self):
+        queue_size_per_producer = 10
+        self.marketplace = Marketplace(queue_size_per_producer)
+        self.marketplace.register_producer()
+        self.marketplace.new_cart()
+
+    def test_register_producer(self):
+        self.assertEqual(self.marketplace.register_producer(), 1,
+                         'incorrect id')
+        self.assertEqual(self.marketplace.producers_list[1], [],
+                         'incorrect empty list')
+        self.assertEqual(len(self.marketplace.producers_list[1]), 0,
+                         'incorrect len')
+
+    def test_publish(self):
+        tea = Tea("lipton", 10, "green_tea")
+        coffee = Coffee("lavazza", 2, "5.05", "MEDIUM")
+        self.assertEqual(self.marketplace.publish("0", tea), True,
+                         'incorrect test_publish')
+        self.assertEqual(self.marketplace.publish("0", coffee), True,
+                         'incorrect test_publish')
+
+    def test_new_cart(self):
+        self.assertEqual(self.marketplace.new_cart(), 1,
+                         'incorrect new_cart')
+        self.assertEqual(self.marketplace.new_cart(), 2,
+                         'incorrect new_cart')
+
+    def test_add_to_cart(self):
+        tea = Tea("lipton", 10, "green_tea")
+        coffee = Coffee("lavazza", 2, "5.05", "MEDIUM")
+        coffee2 = Coffee("lavazza", 2, "5.05", "HIGH")
+
+        self.marketplace.publish("0", tea)
+        self.marketplace.publish("0", coffee2)
+
+        self.assertEqual(self.marketplace.add_to_cart(0, tea), True,
+                         'incorrect add_to_cart')
+        self.assertEqual(self.marketplace.add_to_cart(0, coffee), False,
+                         'incorrect add_to_cart')
+        self.assertEqual(self.marketplace.add_to_cart(0, coffee2), True,
+                         'incorrect add_to_cart')
+
+    def test_remove_from_cart(self):
+        tea = Tea("lipton", 10, "green_tea")
+        coffee = Coffee("lavazza", 2, "5.05", "MEDIUM")
+        coffee2 = Coffee("lavazza", 2, "5.05", "HIGH")
+
+        self.marketplace.publish("0", tea)
+        self.marketplace.publish("0", coffee2)
+
+        self.marketplace.add_to_cart(0, tea)
+        self.marketplace.add_to_cart(0, coffee2)
+
+        self.assertEqual(self.marketplace.remove_from_cart(0, tea), None,
+                         'incorrect remove_from_cart')
+        self.assertEqual(self.marketplace.remove_from_cart(0, coffee), None,
+                         'incorrect remove_from_cart')
+        self.assertEqual(self.marketplace.remove_from_cart(0, coffee2), None,
+                         'incorrect remove_from_cart')
+        self.assertEqual(self.marketplace.cart[0], [],
+                         'incorrect remove_from_cart')
+
+    def test_place_order(self):
+        tea = Tea("lipton", 10, "green_tea")
+        coffee2 = Coffee("lavazza", 2, "5.05", "HIGH")
+
+        self.marketplace.publish("0", tea)
+        self.marketplace.publish("0", coffee2)
+
+        self.marketplace.add_to_cart(0, tea)
+        self.marketplace.add_to_cart(0, coffee2)
+
+        product_list = [tea, coffee2]
+
+        self.assertEqual(self.marketplace.place_order(0), product_list,
+                         'incorrect remove_from_cart')
+
+    def test_check_item_market(self):
+        tea = Tea("lipton", 10, "green_tea")
+        coffee = Coffee("lavazza", 2, "5.05", "MEDIUM")
+        coffee2 = Coffee("lavazza", 2, "5.05", "HIGH")
+
+        self.marketplace.publish("0", tea)
+        self.marketplace.publish("0", coffee2)
+
+        print(self.marketplace.marketplace_products)
+        self.assertEqual(self.marketplace.check_item_market(tea), self.marketplace.marketplace_products[0],
+                         'incorrect check_item_market')
+        self.assertEqual(self.marketplace.check_item_market(coffee), None,
+                         'incorrect check_item_market')
+        self.assertEqual(self.marketplace.check_item_market(coffee2), self.marketplace.marketplace_products[1],
+                         'incorrect check_item_market')
+
+    def test_check_item_cart(self):
+        tea = Tea("lipton", 10, "green_tea")
+        coffee = Coffee("lavazza", 2, "5.05", "MEDIUM")
+        coffee2 = Coffee("lavazza", 2, "5.05", "HIGH")
+
+        self.marketplace.publish("0", tea)
+        self.marketplace.publish("0", coffee2)
+
+        self.marketplace.add_to_cart(0, tea)
+        self.marketplace.add_to_cart(0, coffee2)
+
+        print(self.marketplace.cart[0])
+
+        self.assertEqual(self.marketplace.check_item_cart(tea, 0), self.marketplace.cart[0][0],
+                         'incorrect check_item_cart')
+        self.assertEqual(self.marketplace.check_item_cart(coffee, 0), None,
+                         'incorrect check_item_cart')
+        self.assertEqual(self.marketplace.check_item_cart(coffee2, 0), self.marketplace.cart[0][1],
+                         'incorrect check_item_cart')
