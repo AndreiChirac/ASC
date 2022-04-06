@@ -9,6 +9,25 @@ import os
 import threading
 import time
 import logging
+from logging.handlers import RotatingFileHandler
+from .product import Tea, Coffee
+
+filename = "marketplace.log"
+logging.basicConfig(filename=filename,
+                    format='%(asctime)s %(message)s',
+                    filemode='w')
+
+logging.Formatter.converter = time.gmtime
+logger = logging.getLogger('marketplace_loger')
+
+should_roll_over = os.path.isfile(filename)
+handler = logging.handlers.RotatingFileHandler(filename, 
+mode = 'w', backupCount = 10)
+if should_roll_over:  # log already exists, roll over!
+    handler.doRollover()
+
+# Now we are going to Set the threshold of logger to DEBUG
+logger.setLevel(logging.DEBUG)
 
 
 class Marketplace:
@@ -21,9 +40,12 @@ class Marketplace:
     """
 
     def check_item_market(self, product):
+        logger.info("In check_item " + str(product))
         for product_complex in self.marketplace_products:
             if product == product_complex[0]:
+                logger.info("Out check_item")
                 return product_complex
+        logger.info("Out check_item")
         return None
 
     """
@@ -31,9 +53,12 @@ class Marketplace:
     """
 
     def check_item_cart(self, product, cart_id):
+        logger.info("In check_item_cart " + str(product) + " " + str(cart_id))
         for product_complex in self.cart[cart_id]:
             if product == product_complex[0]:
+                logger.info("Out check_item_cart")
                 return product_complex
+        logger.info("Out check_item_cart")
         return None
 
     def __init__(self, queue_size_per_producer):
@@ -66,6 +91,7 @@ class Marketplace:
         """
         Returns an id for the producer that calls this.
         """
+        logger.info("In register_producer")
         """
         deoarece folosim o variabila care trebuie incrementata vom avea nevoie de un lock pentru ca un thread
         sa nu citeasca o valoare veche
@@ -73,6 +99,7 @@ class Marketplace:
         with self.lock:
             self.producers_list[self.mr_of_producers] = []
             self.mr_of_producers = self.mr_of_producers + 1
+            logger.info("Out register_producer")
             return self.mr_of_producers - 1
 
     def publish(self, producer_id, product):
@@ -87,11 +114,14 @@ class Marketplace:
 
         :returns True or False. If the caller receives False, it should wait and then try again.
         """
+        logger.info("In publish " + producer_id + " " + str(product))
         if len(self.producers_list[int(producer_id)]) >= self.queue_size_per_producer:
+            logger.info("Out publish")
             return False
 
         self.producers_list[int(producer_id)].append(product)
         self.marketplace_products.append((product, int(producer_id)))
+        logger.info("Out publish")
         return True
 
     def new_cart(self):
@@ -104,9 +134,11 @@ class Marketplace:
         deoarece folosim o variabila care trebuie incrementata vom avea nevoie de un lock pentru ca un thread
         sa nu citeasca o valoare veche
         """
+        logger.info("In new_cart")
         with self.lock:
             self.cart[self.nr_of_carts] = []
             self.nr_of_carts = self.nr_of_carts + 1
+            logger.info("Out new_cart")
             return self.nr_of_carts - 1
 
     def add_to_cart(self, cart_id, product):
@@ -121,6 +153,7 @@ class Marketplace:
 
         :returns True or False. If the caller receives False, it should wait and then try again
         """
+        logger.info("In add_to_cart " + str(cart_id) + " " + str(product))
         """
         lock-ul este folostit deoare in momentul in care un cumparator vrea sa adauge in cos acel produs sa fie blocat
         astfel astfel incat sa nu poata exista un alt thread care sa fure produsul
@@ -130,8 +163,10 @@ class Marketplace:
             if item is not None:
                 self.cart[cart_id].append(item)
                 self.marketplace_products.remove(item)
+                logger.info("Out add_to_cart")
                 return True
             else:
+                logger.info("Out add_to_cart")
                 return False
 
     def remove_from_cart(self, cart_id, product):
@@ -144,6 +179,7 @@ class Marketplace:
         :type product: Product
         :param product: the product to remove from cart
         """
+        logger.info("In remove_from_cart " + str(cart_id) + " " + str(product))
         item = self.check_item_cart(product, cart_id)
         """
         nu avem nevoie de lock pe intreaga operatie deoarece fiecare thread are cart_id-ul lui iar metoda de append este
@@ -152,6 +188,7 @@ class Marketplace:
         if item is not None:
             self.cart[cart_id].remove(item)
             self.marketplace_products.append(item)
+            logger.info("Out remove_from_cart")
 
     def place_order(self, cart_id):
         """
@@ -160,6 +197,7 @@ class Marketplace:
         :type cart_id: Int
         :param cart_id: id cart
         """
+        logger.info("In place_order " + str(cart_id))
         """
         nu avem nevoie de lock pe intreaga operatie deoarece fiecare thread are cart_id-ul lui
         """
@@ -169,4 +207,6 @@ class Marketplace:
             producer_id = product_extended[1]
             self.producers_list[producer_id].remove(product)
             product_list.append(product)
+        logger.info("Out place_order")
         return product_list
+
