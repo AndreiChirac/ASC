@@ -33,41 +33,36 @@ s
         @param kwargs: other arguments that are passed to the Thread's __init__()
         """
         Thread.__init__(self, **kwargs)
-        self.id = None
+        self.id_producer = None
         self.products = products
         self.marketplace = marketplace
         self.republish_wait_time = republish_wait_time
-        self.id = self.marketplace.register_producer()
 
     def run(self):
+        self.id_producer = self.marketplace.register_producer()
         while 1:
             for product_process in self.products:
-                """
-                product_process este format din product numarul de produse pe care urmam sa le producem si timpul
-                de asteptare intre doua produse
-                """
+
+                # product_process este format din product numarul de produse pe care urmam sa le
+                # producem si timpul de asteptare intre doua produse
                 product = product_process[0]
                 product_nr = product_process[1]
                 product_cnt = 0
                 product_wait_time = product_process[2]
 
                 while True:
-                    """
-                    in cazul in care s-a produs deja cantitatea dorita fom dori trecerea la urmatorul produs
-                    """
+
+                    # in cazul in care s-a produs deja cantitatea dorita fom dori trecerea la
+                    # urmatorul produs
                     if product_cnt >= product_nr:
                         break
-                    """
-                    in cazul in care publish intoarce true inseamna ca publicarea s-a realizat cu succes asa ca putem
-                    incrementa numaurl de produse create si trebuie sa asteptam intervalul de timp in caz contrat se
-                    va astepta pana cand marketplace-ul devine disponibil
-                    """
-                    if self.marketplace.publish(str(self.id), product):
+
+                    # in cazul in care publish intoarce true inseamna ca publicarea s-a realizat
+                    # cu succes asa ca putem incrementa numaurl de produse create si trebuie sa
+                    # asteptam intervalul de timp in caz contrat se va astepta pana cand
+                    # marketplace-ul devine disponibil
+                    if self.marketplace.publish(str(self.id_producer), product):
                         product_cnt += 1
                         time.sleep(product_wait_time)
                     else:
                         time.sleep(self.republish_wait_time)
-
-
-
-
