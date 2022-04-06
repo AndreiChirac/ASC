@@ -1,0 +1,54 @@
+    Andrei Chirac 335CC
+    https://github.com/AndreiChirac/ASC
+
+    Ideea generala a temei se bazează pe:
+
+        MARKETPLACE:
+            - O lista de tupluri (id_furnizor, produsul) care reprezinta locul de unde fiecare
+            thread de tip consumator isi va furniza produsul dorit. Am optat pentru acest tip de
+            stocare deoarece aceasta lista reprezinta locul unde produsul devine indisponibil
+            pentru consumatori, dar nu si pentru producatori pentru a putea tine cont de dimensiunea
+            impusa.
+            . In momentul in care un consumator va dori finalizarea comenzii el se va putea folosi
+            de tuplurile stocate pentru a elimina produsele din listele furnizorilor.
+            - Un dictionar in care vom avea cheia egala cu id-ul producatorului, iar valoarea este
+            o lista cu toate produsele care nu au fost cumparate de consumator (place_order).
+            - Un dictionar ce reprezinta toate cosurile din magazin, cheia reprezinta id-ul unui
+            cumparator, iar valoarea este o lista de tupluri (id_furnizor, produsul) ca mai apoi in
+            momentul plasarii unei comenzi sa putem scoate din lista producatorului respectiv.
+
+        PRODUCER:
+            - Fiecarui producator i se atribuie un id
+            - Producatorii vor avea un comportament continuu deci vom opta pentru o bucla infinita
+            - Iteram prin lista de produse pe care acestia doresc sa o publice, fiecare produs este
+            produs intr-o anumita cantitate deci vom avea nevoie de o bucla astfel incat sa stim
+            momentul in care s-a finalizat procesul de productie. Ne vom folosi de metoda publish
+            pentru a sti daca este posibila producerea unui produs sau daca se va astepta.
+
+        CONSUMER:
+            - In cadrul unu consumator exista mai mutle cosuri  acest lucru fiind vazut ca o noua
+            vizita la magazin astfel de fiecare data cand se va trece la un cos nou se va atribui un
+            id nou.
+            - Fiecare consumator adauga sau elimina produse din cos, astfel ne vom folosi de
+            metodele clasei marketplace pentru a realiza astfel de operatii. In cazul operatiei de
+            adaugare daca primim false stim ca pentru moment produsul solicitat este indisponibil
+            deci vom astepta si vom reincerca dupa un timp dat.
+
+            Datorita faptului ca lucram cu thread-uri trebuie sa luam in calcul concurenta acestora
+        la anumite date. Astfel putem proteja regiunea critica cu un Lock. In cazul meu una din
+        problemele de sincronizare a fost cauzata de id-urile atribuite atat producatorilor cat si
+        a consumatorilor(aparand problema de citire a unei valori mai vechi si atribuirea unui id
+        gresit). Am optat pentru o implementare cu cat mai multe liste deoarce acestea sunt  thread
+        safe. Fata de metoda publish cu ajutorul careia fiecare furnizor isi aduce produsul pe
+        piata, metoda add_to_cart a fost problematica deoarece aparea fenomenul in care threadurile
+        gaseau un produs disponibil si fiecare incera sa-l scoata de pe raft si sa-l aduage in
+        propriul cos asa ca si aici am optat pentru un Lock. In cazul metodei de remove_to_cart sau
+        de place_order folosind un id specific pentru fiecare thread listele nu sunt in pericol de
+        accesare de catre alt thread.
+
+        Resurse:
+            - https://stackoverflow.com/questions/44635896/how-to-create-a-new-log-file-every-time-the-application-runs
+            - https://ocw.cs.pub.ro/courses/asc/laboratoare/01
+            - https://ocw.cs.pub.ro/courses/asc/laboratoare/02
+            - https://ocw.cs.pub.ro/courses/asc/laboratoare/03
+            - https://docs.python.org/3/library/unittest.html
